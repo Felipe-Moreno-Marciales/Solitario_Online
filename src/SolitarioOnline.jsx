@@ -263,7 +263,7 @@ export default function SolitarioOnline() {
     incrementarMovimientos();
   }
 
-  function intentarAutoABase(carta, datosOrigen) {
+  function intentarAutocompletar(carta, datosOrigen) {
     if (!carta || !carta.faceUp) return false;
 
     const estado = { mazo, descarte, bases, columnas };
@@ -332,7 +332,7 @@ export default function SolitarioOnline() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-2xl font-bold">Solitario Clásico Online</div>
+            <div className="text-2xl font-bold">Solitario Online</div>
             <div className="text-white/80 text-sm">Movimientos: {movimientos}{gano ? " · ¡Ganaste! 🏆" : ""}</div>
           </div>
           <div className="flex items-center gap-2">
@@ -340,21 +340,21 @@ export default function SolitarioOnline() {
               className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20"
               onClick={nuevaPartida}
             >
-              Nuevo
+              Nueva partida
             </button>
             <button
               className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20"
               onClick={() => {
-                // Ayuda rápida: intentar mover la carta superior del descarte a cualquier base si es posible
+                // Autocompletar: intenta mover la carta superior del descarte a una base si es posible
                 if (cartaSuperiorDescarte) {
-                  intentarAutoABase(cartaSuperiorDescarte, { origen: "descarte" });
+                  intentarAutocompletar(cartaSuperiorDescarte, { origen: "descarte" });
                   return;
                 }
                 // Intentar con las cartas superiores de las columnas
                 for (let columna = 0; columna < 7; columna++) {
                   const cima = ultimaCarta(columnas[columna]);
                   if (cima && cima.faceUp) {
-                    const movio = intentarAutoABase(cima, {
+                    const movio = intentarAutocompletar(cima, {
                       origen: "columna",
                       indiceOrigen: columna,
                       indiceInicio: columnas[columna].length - 1,
@@ -364,7 +364,7 @@ export default function SolitarioOnline() {
                 }
               }}
             >
-              Auto a bases
+              Autocompletar
             </button>
           </div>
         </div>
@@ -377,7 +377,7 @@ export default function SolitarioOnline() {
               <div
                 className="w-[92px] h-[128px] rounded-xl border border-white/25 bg-white/10 shadow-sm flex items-center justify-center cursor-pointer"
                 onClick={robarDelMazo}
-                title="Clic para robar / reciclar"
+                title="Haz clic para robar o reciclar"
               >
                 {mazo.length > 0 ? (
                   <div className="w-[84px] h-[120px] rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 border border-white/20" />
@@ -385,7 +385,7 @@ export default function SolitarioOnline() {
                   <div className="text-white/70 text-xs">{marcadores.mazo}</div>
                 )}
               </div>
-              <div className="mt-2 text-xs text-white/70">Clic</div>
+              <div className="mt-2 text-xs text-white/70">Haz clic</div>
             </div>
 
             {/* Descarte */}
@@ -399,14 +399,14 @@ export default function SolitarioOnline() {
                     carta={cartaSuperiorDescarte}
                     arrastrable
                     alArrastrarInicio={(evento) => manejarInicioArrastre(evento, { origen: "descarte" })}
-                    alDobleClic={() => intentarAutoABase(cartaSuperiorDescarte, { origen: "descarte" })}
+                    alDobleClic={() => intentarAutocompletar(cartaSuperiorDescarte, { origen: "descarte" })}
                     className="w-[84px] h-[120px]"
                   />
                 ) : (
                   <div className="text-white/70 text-xs">{marcadores.descarte}</div>
                 )}
               </div>
-              <div className="mt-2 text-xs text-white/70">Arrastra / doble clic</div>
+              <div className="mt-2 text-xs text-white/70">Arrastra o haz doble clic</div>
             </div>
           </div>
 
@@ -420,7 +420,7 @@ export default function SolitarioOnline() {
                     className="w-[92px] h-[128px] rounded-xl border border-white/25 bg-white/10 shadow-sm flex items-center justify-center"
                     onDragOver={permitirSoltar}
                     onDrop={(evento) => soltarEnBase(evento, indiceBase)}
-                    title="Suelta aquí"
+                    title="Suelta la carta aquí"
                   >
                     {cima ? (
                       <Carta
@@ -452,13 +452,13 @@ export default function SolitarioOnline() {
                   style={{ height: altura }}
                   onDragOver={permitirSoltar}
                   onDrop={(evento) => soltarEnColumna(evento, indiceColumna)}
-                  title="Suelta aquí"
+                    title="Suelta la carta aquí"
                 >
                   {/* Marcador vacío */}
                   <div className="absolute inset-x-0 top-0">
                     <div className="w-[92px] h-[128px] rounded-xl border border-white/25 bg-white/10 shadow-sm flex items-center justify-center">
                       {pila.length === 0 ? (
-                        <div className="text-white/60 text-xs">R</div>
+                        <div className="text-white/60 text-xs">K</div>
                       ) : (
                         <div className="text-white/0 text-xs">.</div>
                       )}
@@ -489,7 +489,7 @@ export default function SolitarioOnline() {
                         alDobleClic={() => {
                           if (!esCima) return; // sensación clásica: solo la carta superior se mueve automáticamente
                           if (!carta.faceUp) return;
-                          intentarAutoABase(carta, datosArrastre);
+                          intentarAutocompletar(carta, datosArrastre);
                         }}
                         estilo={estiloCarta}
                         className="w-[92px] h-[128px]"
@@ -503,12 +503,12 @@ export default function SolitarioOnline() {
         </div>
 
         <div className="mt-8 text-sm text-white/80">
-          <div className="font-semibold">Reglas rápidas</div>
+          <div className="font-semibold">Cómo jugar</div>
           <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li>Columnas: alterna colores y baja en valor (Q sobre K, 10 sobre J, etc.).</li>
-            <li>Espacios vacíos: solo Rey.</li>
-            <li>Bases: mismo palo, subiendo desde As.</li>
-            <li>Doble clic en carta superior: intenta enviarla a una base.</li>
+            <li>Columnas: alterna color y baja 1 valor (ejemplo: 10 sobre J).</li>
+            <li>Columna vacía: solo entra carta K.</li>
+            <li>Bases: mismo símbolo (♠ ♥ ♦ ♣), de carta A hasta carta K.</li>
+            <li>Doble clic en la carta de arriba: se envía a base si es posible.</li>
           </ul>
         </div>
       </div>
