@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// Solitario Clásico Online (Klondike, robo de una carta). Arrastrar y soltar + doble clic para enviar automáticamente a las bases.
+// Solitario Clásico Online (Klondike, robo de una carta). Arrastra y suelta + doble clic o Autocompletar para enviar cartas a base.
 
 const PALOS = ["♠", "♥", "♦", "♣"];
 const VALORES = [
@@ -53,14 +53,14 @@ function ultimaCarta(arreglo) {
 
 function puedeMoverABase(carta, pilaBase) {
   if (!carta) return false;
-  if (pilaBase.length === 0) return carta.rank === 1; // As
+  if (pilaBase.length === 0) return carta.rank === 1; // carta A
   const cima = ultimaCarta(pilaBase);
   return cima.suit === carta.suit && carta.rank === cima.rank + 1;
 }
 
 function puedeMoverAColumna(carta, pilaColumna) {
   if (!carta) return false;
-  if (pilaColumna.length === 0) return carta.rank === 13; // Rey
+  if (pilaColumna.length === 0) return carta.rank === 13; // carta K
   const cima = ultimaCarta(pilaColumna);
   if (!cima.faceUp) return false;
   const colorOrigen = colorPalo(carta.suit);
@@ -350,7 +350,7 @@ export default function SolitarioOnline() {
                   intentarAutocompletar(cartaSuperiorDescarte, { origen: "descarte" });
                   return;
                 }
-                // Intentar con las cartas superiores de las columnas
+                // Autocompletar: si no hay descarte, intenta con las cartas superiores de las columnas
                 for (let columna = 0; columna < 7; columna++) {
                   const cima = ultimaCarta(columnas[columna]);
                   if (cima && cima.faceUp) {
@@ -454,7 +454,7 @@ export default function SolitarioOnline() {
                   onDrop={(evento) => soltarEnColumna(evento, indiceColumna)}
                     title="Suelta la carta aquí"
                 >
-                  {/* Marcador vacío */}
+                  {/* Marcador de columna vacía (solo carta K) */}
                   <div className="absolute inset-x-0 top-0">
                     <div className="w-[92px] h-[128px] rounded-xl border border-white/25 bg-white/10 shadow-sm flex items-center justify-center">
                       {pila.length === 0 ? (
@@ -487,7 +487,7 @@ export default function SolitarioOnline() {
                         arrastrable={arrastrable}
                         alArrastrarInicio={(evento) => arrastrable && manejarInicioArrastre(evento, datosArrastre)}
                         alDobleClic={() => {
-                          if (!esCima) return; // sensación clásica: solo la carta superior se mueve automáticamente
+                          if (!esCima) return; // comportamiento clásico: solo la carta superior se autocompleta
                           if (!carta.faceUp) return;
                           intentarAutocompletar(carta, datosArrastre);
                         }}
