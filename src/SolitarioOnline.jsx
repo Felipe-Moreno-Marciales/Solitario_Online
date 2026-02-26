@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import FuegosArtificiales from "./components/FuegosArtificiales.jsx";
 
 // Solitario Clásico Online (Klondike, robo de una carta). Arrastra y suelta + doble clic o Autocompletar para enviar cartas a base.
 
@@ -41,7 +42,7 @@ function crearMazo() {
   const mazo = [];
   for (const palo of PALOS) {
     for (let valor = 1; valor <= 13; valor++) {
-      mazo.push({ id: `c_${id++}`, suit: palo, rank: valor, faceUp: false });
+      mazo.push({ id: `c_${id++}`, palo, valor, bocaArriba: false });
     }
   }
   return mazo;
@@ -53,19 +54,19 @@ function ultimaCarta(arreglo) {
 
 function puedeMoverABase(carta, pilaBase) {
   if (!carta) return false;
-  if (pilaBase.length === 0) return carta.rank === 1; // carta A
+  if (pilaBase.length === 0) return carta.valor === 1; // carta A
   const cima = ultimaCarta(pilaBase);
-  return cima.suit === carta.suit && carta.rank === cima.rank + 1;
+  return cima.palo === carta.palo && carta.valor === cima.valor + 1;
 }
 
 function puedeMoverAColumna(carta, pilaColumna) {
   if (!carta) return false;
-  if (pilaColumna.length === 0) return carta.rank === 13; // carta K
+  if (pilaColumna.length === 0) return carta.valor === 13; // carta K
   const cima = ultimaCarta(pilaColumna);
-  if (!cima.faceUp) return false;
-  const colorOrigen = colorPalo(carta.suit);
-  const colorDestino = colorPalo(cima.suit);
-  return colorOrigen !== colorDestino && carta.rank === cima.rank - 1;
+  if (!cima.bocaArriba) return false;
+  const colorOrigen = colorPalo(carta.palo);
+  const colorDestino = colorPalo(cima.palo);
+  return colorOrigen !== colorDestino && carta.valor === cima.valor - 1;
 }
 
 function esVictoria(bases) {
@@ -85,28 +86,28 @@ function parsearDatosArrastreSeguro(dataTransfer) {
   return null;
 }
 
-function Carta({ carta, arrastrable, alArrastrarInicio, alDobleClic, estilo, className = "" }) {
-  const esRoja = colorPalo(carta.suit) === "red";
+function Carta({ carta, arrastrable, alArrastrarInicio, alDobleClic, estilo, clase = "" }) {
+  const esRoja = colorPalo(carta.palo) === "red";
   return (
     <div
       style={estilo}
       className={
         "select-none rounded-xl border shadow-sm bg-white " +
-        (carta.faceUp ? "" : "bg-gradient-to-br from-blue-600 to-blue-800 text-transparent") +
+        (carta.bocaArriba ? "" : "bg-gradient-to-br from-blue-600 to-blue-800 text-transparent") +
         " " +
-        className
+        clase
       }
       draggable={arrastrable}
       onDragStart={alArrastrarInicio}
       onDoubleClick={alDobleClic}
     >
-      {carta.faceUp ? (
+      {carta.bocaArriba ? (
         <div className="p-2 flex items-start justify-between">
           <div className={"text-sm font-semibold " + (esRoja ? "text-red-600" : "text-slate-900")}>
-            {textoValor(carta.rank)}{carta.suit}
+            {textoValor(carta.valor)}{carta.palo}
           </div>
           <div className={"text-2xl leading-none " + (esRoja ? "text-red-600" : "text-slate-900")}>
-            {carta.suit}
+            {carta.palo}
           </div>
         </div>
       ) : (
@@ -145,13 +146,13 @@ export default function SolitarioOnline() {
     // Repartir columnas: 1..7, solo la última carta de cada pila boca arriba
     for (let columna = 0; columna < 7; columna++) {
       for (let fila = 0; fila <= columna; fila++) {
-        const carta = { ...baraja[indice++], faceUp: fila === columna };
+        const carta = { ...baraja[indice++], bocaArriba: fila === columna };
         columnasIniciales[columna].push(carta);
       }
     }
 
     // Cartas restantes al mazo (la superior queda al final)
-    const mazoInicial = baraja.slice(indice).map((carta) => ({ ...carta, faceUp: false }));
+    const mazoInicial = baraja.slice(indice).map((carta) => ({ ...carta, bocaArriba: false }));
 
     setColumnas(columnasIniciales);
     setMazo(mazoInicial);
@@ -178,7 +179,7 @@ export default function SolitarioOnline() {
     if (mazo.length > 0) {
       const carta = ultimaCarta(mazo);
       const siguienteMazo = mazo.slice(0, -1);
-      const siguienteDescarte = [...descarte, { ...carta, faceUp: true }];
+      const siguienteDescarte = [...descarte, { ...carta, bocaArriba: true }];
       setMazo(siguienteMazo);
       setDescarte(siguienteDescarte);
       incrementarMovimientos();
@@ -189,7 +190,7 @@ export default function SolitarioOnline() {
     if (descarte.length > 0) {
       const reciclado = [...descarte]
         .reverse()
-        .map((carta) => ({ ...carta, faceUp: false }));
+        .map((carta) => ({ ...carta, bocaArriba: false }));
       setMazo(reciclado);
       setDescarte([]);
       incrementarMovimientos();
@@ -200,8 +201,8 @@ export default function SolitarioOnline() {
     const pila = siguientesColumnas[columna];
     if (pila.length === 0) return siguientesColumnas;
     const cima = ultimaCarta(pila);
-    if (!cima.faceUp) {
-      siguientesColumnas[columna] = [...pila.slice(0, -1), { ...cima, faceUp: true }];
+    if (!cima.bocaArriba) {
+      siguientesColumnas[columna] = [...pila.slice(0, -1), { ...cima, bocaArriba: true }];
     }
     return siguientesColumnas;
   }
@@ -242,9 +243,9 @@ export default function SolitarioOnline() {
         return { cartasMovidas: [], siguienteEstado };
       }
       const porcion = pila.slice(indiceInicio);
-      if (!porcion.length || !porcion[0].faceUp) return { cartasMovidas: [], siguienteEstado };
+      if (!porcion.length || !porcion[0].bocaArriba) return { cartasMovidas: [], siguienteEstado };
       // Asegurar que todas estén boca arriba
-      if (porcion.some((carta) => !carta.faceUp)) return { cartasMovidas: [], siguienteEstado };
+      if (porcion.some((carta) => !carta.bocaArriba)) return { cartasMovidas: [], siguienteEstado };
 
       cartasMovidas = porcion.map((carta) => ({ ...carta }));
       siguienteEstado.columnas[indiceColumna] = pila.slice(0, indiceInicio);
@@ -264,7 +265,7 @@ export default function SolitarioOnline() {
   }
 
   function intentarAutocompletar(carta, datosOrigen) {
-    if (!carta || !carta.faceUp) return false;
+    if (!carta || !carta.bocaArriba) return false;
 
     const estado = { mazo, descarte, bases, columnas };
     const { cartasMovidas, siguienteEstado } = extraerMovimiento(datosOrigen, estado);
@@ -329,6 +330,7 @@ export default function SolitarioOnline() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-emerald-700 to-emerald-900 text-white p-4 md:p-6">
+      <FuegosArtificiales activo={gano} />
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
@@ -353,7 +355,7 @@ export default function SolitarioOnline() {
                 // Autocompletar: si no hay descarte, intenta con las cartas superiores de las columnas
                 for (let columna = 0; columna < 7; columna++) {
                   const cima = ultimaCarta(columnas[columna]);
-                  if (cima && cima.faceUp) {
+                  if (cima && cima.bocaArriba) {
                     const movio = intentarAutocompletar(cima, {
                       origen: "columna",
                       indiceOrigen: columna,
@@ -400,7 +402,7 @@ export default function SolitarioOnline() {
                     arrastrable
                     alArrastrarInicio={(evento) => manejarInicioArrastre(evento, { origen: "descarte" })}
                     alDobleClic={() => intentarAutocompletar(cartaSuperiorDescarte, { origen: "descarte" })}
-                    className="w-[84px] h-[120px]"
+                    clase="w-[84px] h-[120px]"
                   />
                 ) : (
                   <div className="text-white/70 text-xs">{marcadores.descarte}</div>
@@ -424,11 +426,11 @@ export default function SolitarioOnline() {
                   >
                     {cima ? (
                       <Carta
-                        carta={{ ...cima, faceUp: true }}
+                        carta={{ ...cima, bocaArriba: true }}
                         arrastrable
                         alArrastrarInicio={(evento) => manejarInicioArrastre(evento, { origen: "base", indiceOrigen: indiceBase })}
                         alDobleClic={() => {}}
-                        className="w-[84px] h-[120px]"
+                        clase="w-[84px] h-[120px]"
                       />
                     ) : (
                       <div className="text-white/80 text-2xl">{marcadores.bases[indiceBase]}</div>
@@ -466,9 +468,9 @@ export default function SolitarioOnline() {
                   </div>
 
                   {pila.map((carta, indiceCarta) => {
-                    const desplazamiento = carta.faceUp ? 26 : 18;
+                    const desplazamiento = carta.bocaArriba ? 26 : 18;
                     const arribaPx = indiceCarta * desplazamiento;
-                    const arrastrable = carta.faceUp;
+                    const arrastrable = carta.bocaArriba;
 
                     // Para columnas: permitir arrastrar cualquier carta boca arriba (pila desde idx)
                     const datosArrastre = {
@@ -488,11 +490,11 @@ export default function SolitarioOnline() {
                         alArrastrarInicio={(evento) => arrastrable && manejarInicioArrastre(evento, datosArrastre)}
                         alDobleClic={() => {
                           if (!esCima) return; // comportamiento clásico: solo la carta superior se autocompleta
-                          if (!carta.faceUp) return;
+                          if (!carta.bocaArriba) return;
                           intentarAutocompletar(carta, datosArrastre);
                         }}
                         estilo={estiloCarta}
-                        className="w-[92px] h-[128px]"
+                        clase="w-[92px] h-[128px]"
                       />
                     );
                   })}
