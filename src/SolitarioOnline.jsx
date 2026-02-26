@@ -20,6 +20,27 @@ const VALORES = [
   { v: 13, t: "K" },
 ];
 
+const NIVELES_DIFICULTAD = {
+  facil: {
+    etiqueta: "Fácil",
+    cartasPorRobo: 1,
+    maxReciclados: Number.POSITIVE_INFINITY,
+    permiteAutocompletar: true,
+  },
+  medio: {
+    etiqueta: "Medio",
+    cartasPorRobo: 3,
+    maxReciclados: Number.POSITIVE_INFINITY,
+    permiteAutocompletar: true,
+  },
+  mitica: {
+    etiqueta: "Mítica",
+    cartasPorRobo: 3,
+    maxReciclados: 1,
+    permiteAutocompletar: false,
+  },
+};
+
 function colorPalo(palo) {
   return palo === "♥" || palo === "♦" ? "red" : "black";
 }
@@ -126,8 +147,17 @@ export default function SolitarioOnline() {
   const [columnas, setColumnas] = useState([[], [], [], [], [], [], []]);
   const [movimientos, setMovimientos] = useState(0);
   const [gano, setGano] = useState(false);
+  const [nivelDificultad, setNivelDificultad] = useState("facil");
+  const [recicladosUsados, setRecicladosUsados] = useState(0);
+  const [menuDificultadAbierto, setMenuDificultadAbierto] = useState(false);
+
+  const dificultadActual = useMemo(
+    () => NIVELES_DIFICULTAD[nivelDificultad] ?? NIVELES_DIFICULTAD.facil,
+    [nivelDificultad]
+  );
 
   const referenciaArrastre = useRef({});
+  const referenciaMenuDificultad = useRef(null);
 
   const marcadores = useMemo(
     () => ({
@@ -160,16 +190,39 @@ export default function SolitarioOnline() {
     setBases([[], [], [], []]);
     setMovimientos(0);
     setGano(false);
+    setRecicladosUsados(0);
   }
 
   useEffect(() => {
     nuevaPartida();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nivelDificultad]);
 
   useEffect(() => {
     setGano(esVictoria(bases));
   }, [bases]);
+
+  useEffect(() => {
+    function manejarClicFuera(evento) {
+      if (!referenciaMenuDificultad.current?.contains(evento.target)) {
+        setMenuDificultadAbierto(false);
+      }
+    }
+
+    function manejarTeclaEscape(evento) {
+      if (evento.key === "Escape") {
+        setMenuDificultadAbierto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", manejarClicFuera);
+    document.addEventListener("keydown", manejarTeclaEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", manejarClicFuera);
+      document.removeEventListener("keydown", manejarTeclaEscape);
+    };
+  }, []);
 
   function incrementarMovimientos() {
     setMovimientos((actual) => actual + 1);
@@ -177,9 +230,12 @@ export default function SolitarioOnline() {
 
   function robarDelMazo() {
     if (mazo.length > 0) {
-      const carta = ultimaCarta(mazo);
-      const siguienteMazo = mazo.slice(0, -1);
-      const siguienteDescarte = [...descarte, { ...carta, bocaArriba: true }];
+      const cantidadRobo = Math.min(dificultadActual.cartasPorRobo, mazo.length);
+      const cartasRobadas = mazo
+        .slice(-cantidadRobo)
+        .map((carta) => ({ ...carta, bocaArriba: true }));
+      const siguienteMazo = mazo.slice(0, -cantidadRobo);
+      const siguienteDescarte = [...descarte, ...cartasRobadas];
       setMazo(siguienteMazo);
       setDescarte(siguienteDescarte);
       incrementarMovimientos();
@@ -188,11 +244,15 @@ export default function SolitarioOnline() {
 
     // Reciclar descarte al mazo
     if (descarte.length > 0) {
+      const puedeReciclar = recicladosUsados < dificultadActual.maxReciclados;
+      if (!puedeReciclar) return;
+
       const reciclado = [...descarte]
         .reverse()
         .map((carta) => ({ ...carta, bocaArriba: false }));
       setMazo(reciclado);
       setDescarte([]);
+      setRecicladosUsados((actual) => actual + 1);
       incrementarMovimientos();
     }
   }
@@ -265,6 +325,7 @@ export default function SolitarioOnline() {
   }
 
   function intentarAutocompletar(carta, datosOrigen) {
+    if (!dificultadActual.permiteAutocompletar) return false;
     if (!carta || !carta.bocaArriba) return false;
 
     const estado = { mazo, descarte, bases, columnas };
@@ -335,9 +396,53 @@ export default function SolitarioOnline() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <div className="text-2xl font-bold">Solitario Online</div>
-            <div className="text-white/80 text-sm">Movimientos: {movimientos}{gano ? " · ¡Ganaste! 🏆" : ""}</div>
+            <div className="text-white/80 text-sm">
+              Movimientos: {movimientos}
+              {gano ? " · ¡Ganaste! 🏆" : ""}
+              {" · "}
+              Dificultad: {dificultadActual.etiqueta}
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <label className="text-sm text-white/90">Dificultad:</label>
+            <div className="relative" ref={referenciaMenuDificultad}>
+              <button
+                type="button"
+                className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white min-w-[110px] flex items-center justify-between gap-2"
+                onClick={() => setMenuDificultadAbierto((actual) => !actual)}
+                aria-haspopup="menu"
+                aria-expanded={menuDificultadAbierto}
+              >
+                <span>{dificultadActual.etiqueta}</span>
+                <span className={"text-xs transition-transform " + (menuDificultadAbierto ? "rotate-180" : "")}>▼</span>
+              </button>
+
+              {menuDificultadAbierto ? (
+                <div className="absolute top-full mt-2 left-0 z-40 w-full min-w-[140px] rounded-xl border border-white/20 bg-emerald-800/90 backdrop-blur-md shadow-lg overflow-hidden">
+                  {Object.entries(NIVELES_DIFICULTAD).map(([clave, nivel]) => {
+                    const estaActivo = clave === nivelDificultad;
+                    return (
+                      <button
+                        key={clave}
+                        type="button"
+                        className={
+                          "w-full text-left px-3 py-2 transition-colors " +
+                          (estaActivo
+                            ? "bg-white/25 text-white font-semibold"
+                            : "text-white/95 hover:bg-white/15")
+                        }
+                        onClick={() => {
+                          setNivelDificultad(clave);
+                          setMenuDificultadAbierto(false);
+                        }}
+                      >
+                        {nivel.etiqueta}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button
               className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20"
               onClick={nuevaPartida}
@@ -345,7 +450,13 @@ export default function SolitarioOnline() {
               Nueva partida
             </button>
             <button
-              className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20"
+              className={
+                "px-3 py-2 rounded-xl border border-white/20 " +
+                (dificultadActual.permiteAutocompletar
+                  ? "bg-white/15 hover:bg-white/25"
+                  : "bg-white/10 opacity-60 cursor-not-allowed")
+              }
+              disabled={!dificultadActual.permiteAutocompletar}
               onClick={() => {
                 // Autocompletar: intenta mover la carta superior del descarte a una base si es posible
                 if (cartaSuperiorDescarte) {
@@ -507,6 +618,9 @@ export default function SolitarioOnline() {
         <div className="mt-8 text-sm text-white/80">
           <div className="font-semibold">Cómo jugar</div>
           <ul className="list-disc pl-5 mt-2 space-y-1">
+            <li>Dificultad Fácil: roba 1 carta, reciclado ilimitado, autocompletar activado.</li>
+            <li>Dificultad Medio: roba 3 cartas, reciclado ilimitado, autocompletar activado.</li>
+            <li>Dificultad Mítica: roba 3 cartas, 1 reciclado máximo, autocompletar desactivado.</li>
             <li>Columnas: alterna color y baja 1 valor (ejemplo: 10 sobre J).</li>
             <li>Columna vacía: solo entra carta K.</li>
             <li>Bases: mismo símbolo (♠ ♥ ♦ ♣), de carta A hasta carta K.</li>
