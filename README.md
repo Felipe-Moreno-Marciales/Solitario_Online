@@ -95,6 +95,10 @@ eslint.config.js          # Configuración de lint
 - **Botón “Nueva partida”**: reinicia partida.
 - **Botón “Autocompletar”**: intenta movimiento automático a bases.
 
+## Licencia
+
+Este proyecto está bajo la licencia **GPL-3.0**. Consulta el archivo [LICENSE](./LICENSE) para más detalles.
+
 ## Autor
 
 Desarrollado por **Felipe Moreno Marciales**.
