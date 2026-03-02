@@ -94,6 +94,49 @@ function esVictoria(bases) {
   return bases.every((b) => b.length === 13);
 }
 
+function hayMovimientoPosible({ mazo, descarte, bases, columnas, maxReciclados, recicladosUsados }) {
+  if (mazo.length > 0) return true;
+  if (descarte.length > 0 && recicladosUsados < maxReciclados) return true;
+
+  const cartaSuperiorDescarte = ultimaCarta(descarte);
+  if (cartaSuperiorDescarte) {
+    for (let i = 0; i < 4; i++) {
+      if (puedeMoverABase(cartaSuperiorDescarte, bases[i])) return true;
+    }
+    for (let i = 0; i < 7; i++) {
+      if (puedeMoverAColumna(cartaSuperiorDescarte, columnas[i])) return true;
+    }
+  }
+
+  for (let origen = 0; origen < 7; origen++) {
+    const pilaOrigen = columnas[origen] || [];
+    for (let indice = 0; indice < pilaOrigen.length; indice++) {
+      const carta = pilaOrigen[indice];
+      if (!carta.bocaArriba) continue;
+
+      if (indice === pilaOrigen.length - 1) {
+        for (let base = 0; base < 4; base++) {
+          if (puedeMoverABase(carta, bases[base])) return true;
+        }
+      }
+
+      for (let destino = 0; destino < 7; destino++) {
+        if (destino === origen) continue;
+        const pilaDestino = columnas[destino] || [];
+        if (!puedeMoverAColumna(carta, pilaDestino)) continue;
+
+        const revelaCartaOculta = indice > 0 && !pilaOrigen[indice - 1].bocaArriba;
+        const abreColumna = indice === 0;
+        const usaColumnaVacia = pilaDestino.length === 0;
+
+        if (revelaCartaOculta || abreColumna || usaColumnaVacia) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function parsearDatosArrastreSeguro(dataTransfer) {
   const llaves = ["application/json", "text/plain"];
   for (const llave of llaves) {
@@ -147,6 +190,7 @@ export default function SolitarioOnline() {
   const [columnas, setColumnas] = useState([[], [], [], [], [], [], []]);
   const [movimientos, setMovimientos] = useState(0);
   const [gano, setGano] = useState(false);
+  const [perdio, setPerdio] = useState(false);
   const [nivelDificultad, setNivelDificultad] = useState("facil");
   const [recicladosUsados, setRecicladosUsados] = useState(0);
   const [menuDificultadAbierto, setMenuDificultadAbierto] = useState(false);
@@ -190,6 +234,7 @@ export default function SolitarioOnline() {
     setBases([[], [], [], []]);
     setMovimientos(0);
     setGano(false);
+    setPerdio(false);
     setRecicladosUsados(0);
   }
 
@@ -201,6 +246,24 @@ export default function SolitarioOnline() {
   useEffect(() => {
     setGano(esVictoria(bases));
   }, [bases]);
+
+  useEffect(() => {
+    if (gano) {
+      setPerdio(false);
+      return;
+    }
+
+    const sinMovimientos = !hayMovimientoPosible({
+      mazo,
+      descarte,
+      bases,
+      columnas,
+      maxReciclados: dificultadActual.maxReciclados,
+      recicladosUsados,
+    });
+
+    setPerdio(sinMovimientos);
+  }, [mazo, descarte, bases, columnas, dificultadActual.maxReciclados, recicladosUsados, gano]);
 
   useEffect(() => {
     function manejarClicFuera(evento) {
@@ -229,6 +292,8 @@ export default function SolitarioOnline() {
   }
 
   function robarDelMazo() {
+    if (perdio || gano) return;
+
     if (mazo.length > 0) {
       const cantidadRobo = Math.min(dificultadActual.cartasPorRobo, mazo.length);
       const cartasRobadas = mazo
@@ -325,6 +390,7 @@ export default function SolitarioOnline() {
   }
 
   function intentarAutocompletar(carta, datosOrigen) {
+    if (perdio || gano) return false;
     if (!dificultadActual.permiteAutocompletar) return false;
     if (!carta || !carta.bocaArriba) return false;
 
@@ -356,6 +422,7 @@ export default function SolitarioOnline() {
 
   function soltarEnBase(evento, indiceBase) {
     evento.preventDefault();
+    if (perdio || gano) return;
     const datos = parsearDatosArrastreSeguro(evento.dataTransfer);
     if (!datos) return;
 
@@ -372,6 +439,7 @@ export default function SolitarioOnline() {
 
   function soltarEnColumna(evento, indiceColumna) {
     evento.preventDefault();
+    if (perdio || gano) return;
     const datos = parsearDatosArrastreSeguro(evento.dataTransfer);
     if (!datos) return;
 
@@ -399,6 +467,7 @@ export default function SolitarioOnline() {
             <div className="text-white/80 text-sm">
               Movimientos: {movimientos}
               {gano ? " · ¡Ganaste! 🏆" : ""}
+              {perdio ? " · Sin movimientos" : ""}
               {" · "}
               Dificultad: {dificultadActual.etiqueta}
             </div>
@@ -481,6 +550,20 @@ export default function SolitarioOnline() {
             </button>
           </div>
         </div>
+
+        {perdio ? (
+          <div className="mt-5 rounded-2xl border border-red-200/60 bg-red-600/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm md:text-base text-white">
+              Sin movimientos disponibles.
+            </div>
+            <button
+              className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30"
+              onClick={nuevaPartida}
+            >
+              Volver a jugar
+            </button>
+          </div>
+        ) : null}
 
         {/* Fila superior */}
         <div className="mt-6 flex items-start justify-between gap-4 flex-wrap">
