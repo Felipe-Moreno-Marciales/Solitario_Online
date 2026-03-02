@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from "react";
 
 const CONFIG_POR_DEFECTO = {
-  duracionMs: 7000,
-  intervaloLanzamientoMs: 280,
-  particulasPorExplosion: 38,
-  gravedad: 0.05,
-  friccion: 0.985,
+  duracionMs: 18000,
+  intervaloLanzamientoMs: 220,
+  particulasPorExplosion: 64,
+  gravedad: 0.035,
+  friccion: 0.989,
 };
 
 const PALETA = ["#f43f5e", "#fb7185", "#f59e0b", "#fde047", "#22c55e", "#2dd4bf", "#38bdf8", "#818cf8", "#c084fc"];
@@ -17,7 +17,7 @@ function colorAleatorio() {
 function crearParticulas(x, y, cantidad) {
   return Array.from({ length: cantidad }, () => {
     const angulo = Math.random() * Math.PI * 2;
-    const velocidad = 1.8 + Math.random() * 3.8;
+    const velocidad = 2.4 + Math.random() * 4.6;
 
     return {
       x,
@@ -25,8 +25,8 @@ function crearParticulas(x, y, cantidad) {
       vx: Math.cos(angulo) * velocidad,
       vy: Math.sin(angulo) * velocidad,
       vida: 1,
-      decaimiento: 0.011 + Math.random() * 0.02,
-      tamano: 1.8 + Math.random() * 2.2,
+      decaimiento: 0.004 + Math.random() * 0.01,
+      tamano: 3.8 + Math.random() * 4.6,
       color: colorAleatorio(),
     };
   });
